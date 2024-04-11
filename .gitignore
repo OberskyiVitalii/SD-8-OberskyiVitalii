@@ -5,10 +5,8 @@ __pycache__/
 
 db.sqlite3
 
-*.pyc
 *.pyo
 __pycache__
 *.sqlite3
-*.pyc
 .vscode/
 .DS_Store
