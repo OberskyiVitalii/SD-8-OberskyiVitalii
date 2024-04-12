@@ -1,22 +1,33 @@
+from django.contrib import messages
 from django.db.models import F
 from django.forms import inlineformset_factory
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-
+from django.contrib.auth.decorators import login_required
 
 
 from .models import Choice, Question
-from .forms import QuestionForm, ChoiceForm, ChoiceFormSet
+from .forms import QuestionForm, ChoiceFormSet
+
+
+
+
 
 def index(request):
     latest_question_list = Question.objects.order_by('-pub_date')
     context = {'latest_question_list': latest_question_list}
     return render(request, 'polls/index.html', context)
 
+
 def detail(request, question_id):
     question = get_object_or_404(Question, pk=question_id)
-    return render(request, 'polls/detail.html', {'question': question})
+    user = question.user
+    context = {
+        'question': question,
+        'user': user,
+    }
+    return render(request, 'polls/detail.html', context)
 
 
 def vote(request, question_id):
@@ -42,13 +53,15 @@ def results(request, question_id):
     question = get_object_or_404(Question, pk=question_id)
     return render(request, 'polls/results.html', {'question': question})
 
-
+@login_required
 def create_question(request):
     if request.method == 'POST':
         form = QuestionForm(request.POST)
         formset = ChoiceFormSet(request.POST, instance=Question())
         if form.is_valid() and formset.is_valid():
-            question = form.save()
+            question = form.save(commit=False)
+            question.user_id = request.user.id
+            question.save()
             choices = formset.save(commit=False)
             for choice in choices:
                 choice.question = question
@@ -59,9 +72,14 @@ def create_question(request):
         formset = ChoiceFormSet(instance=Question())
     return render(request, 'polls/create_question.html', {'form': form, 'formset': formset})
 
+
+@login_required
 def update_question(request, question_id):
     question = get_object_or_404(Question, pk=question_id)
     ChoiceFormSet = inlineformset_factory(Question, Choice, fields=('choice_text',), can_delete=True, extra=0)
+    if request.user.id != question.user_id:
+        messages.error(request, "You do not have permission to update this question.")
+        return redirect('polls:detail', question_id=question.id)
     if request.method == 'POST':
         form = QuestionForm(request.POST, instance=question)
         formset = ChoiceFormSet(request.POST, instance=question)
@@ -77,13 +95,20 @@ def update_question(request, question_id):
         formset = ChoiceFormSet(instance=question)
     return render(request, 'polls/update_question.html', {'form': form, 'formset': formset, 'question': question})
 
+
+@login_required
 def delete_question(request, question_id):
     question = get_object_or_404(Question, pk=question_id)
+    if request.user.id != question.user_id:
+        messages.error(request, "You do not have permission to delete this question.")
+        return redirect('polls:detail', question_id=question.id)
     if request.method == 'POST':
         question.delete()
         return redirect('polls:index')
     return render(request, 'polls/delete_question.html', {'question': question})
 
+
+@login_required
 def create_choice(request, question_id):
     question = get_object_or_404(Question, pk=question_id)
     if request.method == 'POST':
@@ -96,6 +121,7 @@ def create_choice(request, question_id):
     return render(request, 'polls/create_choices.html', {'formset': formset, 'question': question})
 
 
+@login_required
 def delete_choice(request, question_id, choice_id):
     question = get_object_or_404(Question, pk=question_id)
     choice = get_object_or_404(Choice, pk=choice_id)

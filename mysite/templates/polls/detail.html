@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 <!--  -->
+{% block title %} {{ question.question_text }} {% endblock %}
+<!--  -->
 {% block content %}
 
 <form action="{% url 'polls:vote' question.id %}" method="post">
@@ -39,6 +41,9 @@
   <a class="btn-control-question" href="{% url 'polls:results' question.id %}">
     View Results
   </a>
+</div>
+<div>
+  <p>Poll created by {{ user.username }}</p>
 </div>
 
 {% endblock %}

@@ -4,10 +4,12 @@ from django.db import models
 from django.utils import timezone
 from django.contrib import admin
 
+from django.contrib.auth import get_user_model
 
 class Question(models.Model):
     question_text = models.CharField(max_length=200)
     pub_date = models.DateTimeField("date published", default = timezone.now)
+    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, default=0)
 
     def __str__(self):
         return self.question_text
